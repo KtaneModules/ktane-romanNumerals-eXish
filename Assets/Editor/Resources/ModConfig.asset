@@ -23,11 +23,11 @@ MonoBehaviour:
     PDF: https://ktane.timwi.de/PDF/Roman%20Numerals.pdf
 
 
-    Roman Numerals (romanNumeralsModule) v1.0.2
+    Roman Numerals (romanNumeralsModule) v1.0.3
 
     Module and Concept by eXish
 
     Twitch Plays supported'
-  version: 1.0.2
+  version: 1.0.3
   outputFolder: build
   previewImage: {fileID: 2800000, guid: be5f4a123b6065f48b224d2188e85474, type: 3}

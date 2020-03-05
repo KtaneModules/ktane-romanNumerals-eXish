@@ -31,7 +31,8 @@ public class NumeralsScript : MonoBehaviour {
             KMSelectable pressed = obj;
             pressed.OnInteract += delegate () { PressButton(pressed); return false; };
         }
-        bomb.OnBombExploded += OnExplode;
+        bomb.OnBombExploded += delegate () { OnEnd(false); };
+        bomb.OnBombSolved += delegate () { OnEnd(true); };
     }
 
     void Start () {
@@ -41,9 +42,14 @@ public class NumeralsScript : MonoBehaviour {
         Debug.LogFormat("[Roman Numerals #{0}] Needy Roman Numerals has loaded! Waiting for first activation...", moduleId);
     }
 
-    void OnExplode()
+    void OnEnd(bool n)
     {
         bombSolved = true;
+        if (n)
+        {
+            numeralDisp.text = "";
+            inputDisp.text = "";
+        }
     }
 
     void PressButton(KMSelectable pressed)
