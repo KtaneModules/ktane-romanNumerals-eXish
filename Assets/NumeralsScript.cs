@@ -26,12 +26,12 @@ public class NumeralsScript : MonoBehaviour {
         moduleId = moduleIdCounter++;
         moduleSolved = false;
         GetComponent<KMNeedyModule>().OnNeedyActivation += OnNeedyActivation;
-        GetComponent<KMNeedyModule>().OnNeedyDeactivation += OnNeedyDeactivation;
         GetComponent<KMNeedyModule>().OnTimerExpired += OnTimerExpired;
         foreach (KMSelectable obj in buttons){
             KMSelectable pressed = obj;
             pressed.OnInteract += delegate () { PressButton(pressed); return false; };
         }
+        bomb.OnBombExploded += OnExplode;
     }
 
     void Start () {
@@ -39,6 +39,11 @@ public class NumeralsScript : MonoBehaviour {
         numeralDisp.text = "";
         inputDisp.text = "";
         Debug.LogFormat("[Roman Numerals #{0}] Needy Roman Numerals has loaded! Waiting for first activation...", moduleId);
+    }
+
+    void OnExplode()
+    {
+        bombSolved = true;
     }
 
     void PressButton(KMSelectable pressed)
@@ -50,13 +55,13 @@ public class NumeralsScript : MonoBehaviour {
                 if (pressed == buttons[11])
                 {
                     pressed.AddInteractionPunch(0.25f);
-                    audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.ButtonPress, transform);
+                    audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.ButtonPress, pressed.transform);
                     inputDisp.text = "";
                 }
                 else if (pressed == buttons[7])
                 {
                     pressed.AddInteractionPunch(0.25f);
-                    audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.ButtonPress, transform);
+                    audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.ButtonPress, pressed.transform);
                     if (inputDisp.text.Length > 0)
                     {
                         inputDisp.text = inputDisp.text.Substring(0, inputDisp.text.Length - 1);
@@ -66,7 +71,7 @@ public class NumeralsScript : MonoBehaviour {
             else
             {
                 pressed.AddInteractionPunch(0.25f);
-                audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.ButtonPress, transform);
+                audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.ButtonPress, pressed.transform);
                 if (pressed == buttons[11])
                 {
                     inputDisp.text = "";
@@ -131,14 +136,6 @@ public class NumeralsScript : MonoBehaviour {
         moduleSolved = true;
     }
 
-    protected void OnNeedyDeactivation()
-    {
-        ans = 0;
-        numeralDisp.text = "";
-        inputDisp.text = "";
-        moduleSolved = false;
-    }
-
     protected void OnTimerExpired()
     {
         string check = "" + ans;
@@ -152,6 +149,10 @@ public class NumeralsScript : MonoBehaviour {
             GetComponent<KMNeedyModule>().HandleStrike();
             Debug.LogFormat("[Roman Numerals #{0}] Incorrect number! Strike! Waiting for next activation...", moduleId);
         }
+        ans = 0;
+        numeralDisp.text = "";
+        inputDisp.text = "";
+        moduleSolved = false;
     }
 
     private string ToRoman(int number)
@@ -174,6 +175,7 @@ public class NumeralsScript : MonoBehaviour {
     }
 
     //twitch plays
+    private bool bombSolved = false;
     private bool inputIsValid(string s)
     {
         int temp = 0;
@@ -189,18 +191,18 @@ public class NumeralsScript : MonoBehaviour {
     }
 
     #pragma warning disable 414
-    private readonly string TwitchHelpMessage = @"!{0} enter <#> [Enters the given number] | !{0} num [Outputs the currently displayed numeral to chat]";
+    //private readonly string TwitchHelpMessage = @"!{0} enter <#> [Enters the given number] | !{0} num [Outputs the currently displayed numeral to chat]";
+    private readonly string TwitchHelpMessage = @"!{0} enter <#> [Enters the given number]";
     #pragma warning restore 414
-
     IEnumerator ProcessTwitchCommand(string command)
     {
-        if (Regex.IsMatch(command, @"^\s*num\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant) || Regex.IsMatch(command, @"^\s*numeral\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
+        /**if (Regex.IsMatch(command, @"^\s*num\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant) || Regex.IsMatch(command, @"^\s*numeral\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
         {
             yield return null;
             if(moduleSolved == true) yield return "sendtochat Roman Numerals: The displayed numeral is " + numeralDisp.text;
             else yield return "sendtochat Roman Numerals: I am currently not active!";
             yield break;
-        }
+        }*/
         string[] parameters = command.Split(' ');
         if (Regex.IsMatch(parameters[0], @"^\s*enter\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
         {
@@ -255,9 +257,37 @@ public class NumeralsScript : MonoBehaviour {
                         }
                         yield return new WaitForSeconds(0.1f);
                     }
-                    yield break;
+                }
+                else
+                {
+                    yield return "sendtochaterror The specified number to enter '" + parameters[1] + "' is invalid!";
                 }
             }
+            else if(parameters.Length > 2)
+            {
+                yield return "sendtochaterror Too many parameters!";
+            }
+            else if(parameters.Length == 1)
+            {
+                yield return "sendtochaterror Please specify a number to enter!";
+            }
+            yield break;
+        }
+    }
+
+    void TwitchHandleForcedSolve()
+    {
+        //The code is done in a coroutine instead of here so that if the solvebomb command was executed this will just input the number right when it activates and it wont wait for its turn in the queue
+        StartCoroutine(DealWithNeedy());
+    }
+
+    private IEnumerator DealWithNeedy()
+    {
+        while (!bombSolved)
+        {
+            while (numeralDisp.text.Equals("")) { yield return new WaitForSeconds(0.1f); }
+            yield return ProcessTwitchCommand("enter "+ans);
+            while (!numeralDisp.text.Equals("")) { yield return new WaitForSeconds(0.1f); }
         }
     }
 }
